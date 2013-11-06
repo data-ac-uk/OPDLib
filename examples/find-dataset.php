@@ -14,14 +14,52 @@ if( sizeof( $argv ) != 3 )
 	exit(1);
 }
 
-$opd = OrgProfileDocument::discover( $argv[1] );
+$homepage = $argv[1];
+$theme = $argv[2];
+
+try {
+	$opd = OrgProfileDocument::discover( $homepage );
+}
+catch( OPD_Discover_Exception $e )
+{
+        print "Failed to discover OPD: ".$e->getMessage()."\n";
+        exit( 4 );
+}
+catch( OPD_Load_Exception $e )
+{
+        print "Failed to load OPD: ".$e->getMessage()."\n";
+        exit( 3 );
+}
+catch( OPD_Parse_Exception $e )
+{
+        print "Failed to parse OPD: ".$e->getMessage()."\n";
+        # could print out $e->document ?
+        exit( 2 );
+}
+catch( Exception $e )
+{
+        print "Error: ".$e->getMessage()."\n";
+        exit( 1 );
+}
+
 
 print "\n";
-print $opd->org->label()." '".$argv[2]."' Datasets:\n\n";
-foreach( $opd->datasets( "http://purl.org/openorg/theme/".$argv[2]) as $dataset )
+print "OPD Loaded OK for $homepage\n\n";
+$datasets = $opd->datasets( "http://purl.org/openorg/theme/".$theme );
+
+if( sizeof( $datasets ) == 0)
+{
+	print "No '$theme' datasets found.\n";
+	exit( 5 );
+}
+
+print $opd->org->label()." '".$theme."' Datasets:\n\n";
+foreach( $datasets as $dataset )
 {
 	print "URL: $dataset\n";
 	print "License: ".$dataset->get( "dcterms:license" )."\n";
 	print "Conforms to: ".$dataset->get( "dcterms:conformsTo" )."\n";
 	print "\n";
 }
+
+exit( 0 );
