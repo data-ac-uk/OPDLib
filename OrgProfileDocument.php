@@ -100,6 +100,39 @@ static function from_string( $string )
 	return new OrgProfileDocument( $string, "string" );
 }	
 
+static function autodiscover ( $homepages ) {
+	
+	$opds = array(); 
+	
+	foreach($homepages as $url)
+	{
+		try{ 
+			$opd = OrgProfileDocument::discover( $url );
+		}
+		catch( OPD_Discover_Exception $e )
+		{
+			continue;
+		}
+		catch( OPD_Load_Exception $e )
+		{
+			continue;
+		}
+		catch( OPD_Parse_Exception $e )
+		{
+		    continue;
+		}
+		catch( Exception $e )
+		{
+			continue;
+		}
+	
+		$opds[] = $opd->opd_url;
+
+	}
+	
+	return $opds;
+}
+
 static function discover( $url )
 {
 	$ok = preg_match( "/^(https?:\/\/[-a-z0-9\.]+)/", $url, $bits );
