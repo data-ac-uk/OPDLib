@@ -9,6 +9,15 @@ class OrgProfileDocument
 #  string
 function __construct( $param, $from = "url" )
 {
+	
+	if( $from == "local"){
+		$this->result = OrgProfileDocument::get_local( $param );
+		if( $this->result["STATUS"] != "ok" )
+		{
+			throw new OPD_Load_Exception( "Failed to load document: Error ".$this->result["STATUS"] );
+		}
+	}
+	
 	if( $from == "url" )
 	{
 		$this->result = OrgProfileDocument::get_url( $param );
@@ -24,7 +33,7 @@ function __construct( $param, $from = "url" )
 	}
 
 	$parse_as = "Turtle";
-	if( $from == "result" || $from == "url" )
+	if( in_array($from, array("result","url","local") ) )
 	{
 		$effective_url = $this->result["EFFECTIVE_URL"];
 		if( $this->result["CONTENT_TYPE"]=="application/rdf+xml" ) { $parse_as = "RDFXML"; }
@@ -91,6 +100,39 @@ static function from_string( $string )
 	return new OrgProfileDocument( $string, "string" );
 }	
 
+static function autodiscover ( $homepages ) {
+	
+	$opds = array(); 
+	
+	foreach($homepages as $url)
+	{
+		try{ 
+			$opd = OrgProfileDocument::discover( $url );
+		}
+		catch( OPD_Discover_Exception $e )
+		{
+			continue;
+		}
+		catch( OPD_Load_Exception $e )
+		{
+			continue;
+		}
+		catch( OPD_Parse_Exception $e )
+		{
+		    continue;
+		}
+		catch( Exception $e )
+		{
+			continue;
+		}
+	
+		$opds[] = $opd->opd_url;
+
+	}
+	
+	return $opds;
+}
+
 static function discover( $url )
 {
 	$ok = preg_match( "/^(https?:\/\/[-a-z0-9\.]+)/", $url, $bits );
@@ -108,6 +150,7 @@ static function discover( $url )
 	{
 		$opd = new OrgProfileDocument( $result, "result" );
 		$opd->discovery = "WELL-KNOWN";
+		$opd->opd_url = $result['EFFECTIVE_URL'];
 		return $opd;
 	}
 
@@ -156,11 +199,30 @@ static function discover( $url )
 	{
 		throw new OPD_Discover_Exception( "Failed to discover via well-known. Homepage loaded OK but had no rel='openorg' link." );
 	}
-	$opd_url = $linkdata["openorg"][0]["href"];
+ 	$opd_url = $linkdata["openorg"][0]["href"];
 
 	$opd = new OrgProfileDocument( $opd_url, "url" );
 	$opd->discovery = "LINK";
+	
+	$opd->opd_url = $linkdata["openorg"][0]["href"];
 	return $opd;
+}
+
+
+private static function get_local($path)
+{
+	$ret = array();
+	if(!file_exists($path)){
+		$ret['STATUS'] = 'Error: File Not Found';
+		return $ret;
+	}
+	
+	$ret['STATUS'] = 'ok';
+	$ret['EFFECTIVE_URL'] = $path;
+	$ret['CONTENT_TYPE'] = trim(shell_exec("file -bi " . escapeshellarg( $path )));
+	$ret['CONTENT_LENGTH_DOWNLOAD'] = filesize($path);
+	$ret['CONTENT'] = file_get_contents($path);
+	return $ret;
 }
 
 private static function get_url($url)

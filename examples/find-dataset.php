@@ -44,7 +44,8 @@ catch( Exception $e )
 
 
 print "\n";
-print "OPD Loaded OK for $homepage\n\n";
+print "OPD Loaded OK for $homepage\n";
+print "OPD Location: {$opd->opd_url}\n\n";
 $datasets = $opd->datasets( "http://purl.org/openorg/theme/".$theme );
 
 if( sizeof( $datasets ) == 0)
