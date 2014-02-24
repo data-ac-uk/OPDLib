@@ -11,6 +11,8 @@ function __construct( $param, $from = "url" )
 {
 	if( $from == "url" )
 	{
+		
+		$this->opd_url = $param;
 		$this->result = OrgProfileDocument::get_url( $param );
 		if( $this->result["HTTP_CODE"] != "200" )
 		{
@@ -20,6 +22,7 @@ function __construct( $param, $from = "url" )
 
 	if( $from == "result"  )
 	{
+		$this->opd_url = $param["EFFECTIVE_URL"];
 		$this->result = $param;
 	}
 
@@ -157,7 +160,7 @@ static function discover( $url )
 		throw new OPD_Discover_Exception( "Failed to discover via well-known. Homepage loaded OK but had no rel='openorg' link." );
 	}
 	$opd_url = $linkdata["openorg"][0]["href"];
-
+	
 	$opd = new OrgProfileDocument( $opd_url, "url" );
 	$opd->discovery = "LINK";
 	return $opd;
