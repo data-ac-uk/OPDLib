@@ -33,6 +33,11 @@ function __construct( $param, $from = "url" )
 		if( $this->result["CONTENT_TYPE"]=="application/rdf+xml" ) { $parse_as = "RDFXML"; }
 		$document = $this->result["CONTENT"];
 	}
+	elseif( $from == "local" )
+	{
+		$document = file_get_contents($param);
+		$effective_url = "http://example.org/opd";
+	}
 	elseif( $from == "string" )
 	{
 		$document = $param;
