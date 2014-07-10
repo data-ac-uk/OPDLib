@@ -30,7 +30,7 @@ function __construct( $param, $from = "url" )
 	if( $from == "result" || $from == "url" )
 	{
 		$effective_url = $this->result["EFFECTIVE_URL"];
-		if( ( stristr($this->result["CONTENT_TYPE"],"application/xml") !== FALSE  || 
+		if( stristr($this->result["CONTENT_TYPE"],"application/xml") !== FALSE  || 
 			 stristr($this->result["CONTENT_TYPE"],"application/rdf+xml") !== FALSE ) { $parse_as = "RDFXML"; }
 		$document = $this->result["CONTENT"];
 	}
