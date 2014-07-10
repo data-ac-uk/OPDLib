@@ -30,7 +30,7 @@ function __construct( $param, $from = "url" )
 	if( $from == "result" || $from == "url" )
 	{
 		$effective_url = $this->result["EFFECTIVE_URL"];
-		if( $this->result["CONTENT_TYPE"]=="application/rdf+xml" ) { $parse_as = "RDFXML"; }
+		if( $this->result["CONTENT_TYPE"]=="application/rdf+xml" || $this->result["CONTENT_TYPE"]=="application/xml") { $parse_as = "RDFXML"; }
 		$document = $this->result["CONTENT"];
 	}
 	elseif( $from == "local" )
