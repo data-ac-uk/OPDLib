@@ -206,7 +206,7 @@ function datasets( $subjects )
 		{
 			foreach( $subjects as $wanted_subject )
 			{
-				if( $thing_subject == $wanted_subject )
+				if( strcasecmp($thing_subject, $wanted_subject) == 0 )
 				{
 					$datasets []= $org_thing;
 					continue(2);
