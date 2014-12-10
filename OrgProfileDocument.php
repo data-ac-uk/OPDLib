@@ -1,5 +1,27 @@
 <?php
 
+
+define ('UTF32_BIG_ENDIAN_BOM'   , chr(0x00) . chr(0x00) . chr(0xFE) . chr(0xFF));
+define ('UTF32_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE) . chr(0x00) . chr(0x00));
+define ('UTF16_BIG_ENDIAN_BOM'   , chr(0xFE) . chr(0xFF));
+define ('UTF16_LITTLE_ENDIAN_BOM', chr(0xFF) . chr(0xFE));
+define ('UTF8_BOM'               , chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+function detect_utf_encoding($text) {
+
+    $first2 = substr($text, 0, 2);
+    $first3 = substr($text, 0, 3);
+    $first4 = substr($text, 0, 3);
+    
+    if ($first3 == UTF8_BOM) return 'UTF-8';
+    elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
+    elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return 'UTF-32LE';
+    elseif ($first2 == UTF16_BIG_ENDIAN_BOM) return 'UTF-16BE';
+    elseif ($first2 == UTF16_LITTLE_ENDIAN_BOM) return 'UTF-16LE';
+}
+
+
+
 class OrgProfileDocument
 {
 
@@ -50,6 +72,7 @@ function __construct( $param, $from = "url" )
 		throw new OPD_Exception( "Unknown value for 'from': '$from'" );
 	}
 
+	
 	$this->graph = new Graphite();
 	$this->graph->ns( "aiiso", "http://purl.org/vocab/aiiso/schema#" );
 	$this->graph->ns( "org", "http://www.w3.org/ns/org#" );
@@ -108,8 +131,57 @@ static function discover( $url )
 		throw new OPD_Discover_Exception( "Discovery URL does not appear valid." );
 	}
 	$homepage = $bits[1]."/";
+    $result = OrgProfileDocument::get_url( $homepage );
+	
+	if( $result["HTTP_CODE"] == "200" )
+	{
+		# Ok. step 1, try .well-known/openorg
+		$content = preg_replace( "/\n/", ' ', $result["CONTENT"] );
+		$links = array();
+		preg_replace( "/<link([^>]+)>/e", '$links []= "$1";', $content );
+		foreach( $links as $link )
+		{
+			$link = preg_replace( '/\\\\\'/', '"', $link );
+			$l = array();
+			preg_replace( "/([a-z]+)\s*=\s*(\"([^\"]+)\"|([^\s]+))/ei", '$l["$1"] = "$3$4"', $link );
+			if( @ $l["rel"] == "" ) { continue; }
 
-	# Ok. step 1, try .well-known/openorg
+			# use url_to_absolute if available otherwise busk it
+			if( @ $l["href"] )
+			{
+				if( function_exists( "url_to_absolute" ) )
+				{
+					# if the url to absolute library is available, obviously
+					# we'll use that.
+					$l["href"] = url_to_absolute( $homepage, $l["href"] );
+				}
+				else
+				{
+					# otherwise busk it, unless it starts with https? in which
+					# case no action is required.
+					if( ! preg_match( "/^https?:/", $l["href"] ) )
+					{
+						$l["href"] = $homepage . preg_replace( "/^\//", "", $l["href"] );
+					}
+				}
+			}
+			$linkdata[$l["rel"]][]= $l;
+		}
+
+		if( @$linkdata["openorg"][0]["href"] )
+		{
+			$opd_url = $linkdata["openorg"][0]["href"];
+	
+			$opd = new OrgProfileDocument( $opd_url, "url" );
+			$opd->discovery = "LINK";
+			return $opd;
+		
+			//throw new OPD_Discover_Exception( "Failed to discover via well-known. Homepage loaded OK but had no rel='openorg' link." );
+		}
+	}else{
+		throw new OPD_Discover_Exception( "Failed to load homepage with error ".$result["HTTP_CODE"].". Didn't bother looking at the .well-know as homepage not working." );
+	}
+	
 	$wt = $homepage.".well-known/openorg";
 	$result = OrgProfileDocument::get_url( $wt );
 
@@ -120,56 +192,9 @@ static function discover( $url )
 		return $opd;
 	}
 
-	# well, didn't find it that way, lets try through the homepage
-	$result = OrgProfileDocument::get_url( $homepage );
-
-	if( $result["HTTP_CODE"] != "200" )
-	{
-		# could not load the homepage, weird but can happen
-		throw new OPD_Discover_Exception( "Failed to discover via well-known. Failed to load homepage with error ".$result["HTTP_CODE"]."." );
-	}
-
-	$content = preg_replace( "/\n/", ' ', $result["CONTENT"] );
-	$links = array();
-	preg_replace( "/<link([^>]+)>/e", '$links []= "$1";', $content );
-	foreach( $links as $link )
-	{
-		$link = preg_replace( '/\\\\\'/', '"', $link );
-		$l = array();
-		preg_replace( "/([a-z]+)\s*=\s*(\"([^\"]+)\"|([^\s]+))/ei", '$l["$1"] = "$3$4"', $link );
-		if( @ $l["rel"] == "" ) { continue; }
-
-		# use url_to_absolute if available otherwise busk it
-		if( @ $l["href"] )
-		{
-			if( function_exists( "url_to_absolute" ) )
-			{
-				# if the url to absolute library is available, obviously
-				# we'll use that.
-				$l["href"] = url_to_absolute( $homepage, $l["href"] );
-			}
-			else
-			{
-				# otherwise busk it, unless it starts with https? in which
-				# case no action is required.
-				if( ! preg_match( "/^https?:/", $l["href"] ) )
-				{
-					$l["href"] = $homepage . preg_replace( "/^\//", "", $l["href"] );
-				}
-			}
-		}
-		$linkdata[$l["rel"]][]= $l;
-	}
-
-	if( !@$linkdata["openorg"][0]["href"] )
-	{
-		throw new OPD_Discover_Exception( "Failed to discover via well-known. Homepage loaded OK but had no rel='openorg' link." );
-	}
-	$opd_url = $linkdata["openorg"][0]["href"];
+	# could not load the homepage, weird but can happen
+	throw new OPD_Discover_Exception( "Couldn't find a rel='openorg' link tag and also failed to discover via well-known." );
 	
-	$opd = new OrgProfileDocument( $opd_url, "url" );
-	$opd->discovery = "LINK";
-	return $opd;
 }
 
 private static function get_url($url)
