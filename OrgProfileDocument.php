@@ -233,7 +233,7 @@ function datasets( $subjects )
 			{
 				if( strcasecmp($thing_subject, $wanted_subject) == 0 )
 				{
-					$datasets []= $org_thing;
+					$datasets[] = $org_thing;
 					continue(2);
 				}
 			}	
@@ -241,6 +241,29 @@ function datasets( $subjects )
 	}
 	return $datasets;
 }
+
+function datasetsBySubject( $subjects )
+{
+	if( !is_array( $subjects ) ) { $subjects = array( $subjects ); }
+	$datasets = array();
+
+	foreach( $this->org->all( "-oo:organization" ) as $org_thing )
+	{
+		foreach( $org_thing->all( "dcterms:subject" ) as $thing_subject )
+		{
+			foreach( $subjects as $wanted_subject )
+			{
+				if( strcasecmp($thing_subject, $wanted_subject) == 0 )
+				{
+					$datasets[$wanted_subject][] = $org_thing;
+					continue(2);
+				}
+			}	
+		}
+	}
+	return $datasets;
+}
+
 
 }
 
