@@ -11,13 +11,27 @@ function detect_utf_encoding($text) {
 
     $first2 = substr($text, 0, 2);
     $first3 = substr($text, 0, 3);
-    $first4 = substr($text, 0, 3);
+    $first4 = substr($text, 0, 4);
     
     if ($first3 == UTF8_BOM) return 'UTF-8';
     elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return 'UTF-32BE';
     elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return 'UTF-32LE';
     elseif ($first2 == UTF16_BIG_ENDIAN_BOM) return 'UTF-16BE';
     elseif ($first2 == UTF16_LITTLE_ENDIAN_BOM) return 'UTF-16LE';
+	else return false;
+}
+function detect_utf_encoding_and_remove($text) {
+
+    $first2 = substr($text, 0, 2);
+    $first3 = substr($text, 0, 3);
+    $first4 = substr($text, 0, 4);
+    
+    if ($first3 == UTF8_BOM) return substr($text, 3);
+    elseif ($first4 == UTF32_BIG_ENDIAN_BOM) return substr($text, 4);
+    elseif ($first4 == UTF32_LITTLE_ENDIAN_BOM) return substr($text, 4);
+    elseif ($first2 == UTF16_BIG_ENDIAN_BOM) return substr($text, 2);
+    elseif ($first2 == UTF16_LITTLE_ENDIAN_BOM) return substr($text, 2);
+	else return $text;
 }
 
 
@@ -54,7 +68,7 @@ function __construct( $param, $from = "url" )
 		$effective_url = $this->result["EFFECTIVE_URL"];
 		if( stristr($this->result["CONTENT_TYPE"],"application/xml") !== FALSE  || 
 			 stristr($this->result["CONTENT_TYPE"],"application/rdf+xml") !== FALSE ) { $parse_as = "RDFXML"; }
-		$document = $this->result["CONTENT"];
+		$document = detect_utf_encoding_and_remove($this->result["CONTENT"]);
 	}
 	elseif( $from == "local" )
 	{
@@ -84,6 +98,7 @@ function __construct( $param, $from = "url" )
 	}
 	elseif( $parse_as == "Turtle" )
 	{
+		
 		$this->n = $this->graph->addTurtle( $effective_url, $document );
 	}
 	else
