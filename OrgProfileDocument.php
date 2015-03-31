@@ -146,7 +146,7 @@ static function discover( $url )
 		throw new OPD_Discover_Exception( "Discovery URL does not appear valid." );
 	}
 	$homepage = $bits[1]."/";
-    $result = OrgProfileDocument::get_url( $homepage );
+	$result = OrgProfileDocument::get_url( $homepage );
 	
 	if( $result["HTTP_CODE"] == "200" )
 	{
