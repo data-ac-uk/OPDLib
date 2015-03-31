@@ -223,6 +223,7 @@ private static function get_url($url)
 	curl_setopt($process, CURLOPT_TIMEOUT, 30);
 	curl_setopt($process, CURLOPT_RETURNTRANSFER, 1);
 	curl_setopt($process, CURLOPT_FOLLOWLOCATION, 1);
+	curl_setopt($process, CURLOPT_SSL_VERIFYPEER, false);
 
 	$r = array();
 	$r["CONTENT"] = curl_exec($process);
