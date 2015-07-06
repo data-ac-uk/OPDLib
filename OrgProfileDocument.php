@@ -39,6 +39,8 @@ function detect_utf_encoding_and_remove($text) {
 class OrgProfileDocument
 {
 
+	private $xmlheaders = array("application/xml","application/rdf+xml","application/xhtml+xml","text/xml");
+
 # allowed $from:
 #  url
 #  result
@@ -66,8 +68,11 @@ function __construct( $param, $from = "url" )
 	if( $from == "result" || $from == "url" )
 	{
 		$effective_url = $this->result["EFFECTIVE_URL"];
-		if( stristr($this->result["CONTENT_TYPE"],"application/xml") !== FALSE  || 
-			 stristr($this->result["CONTENT_TYPE"],"application/rdf+xml") !== FALSE ) { $parse_as = "RDFXML"; }
+		foreach($this->xmlheaders as $head){
+			if( stristr($this->result["CONTENT_TYPE"],$head) !== FALSE ){
+				$parse_as = "RDFXML";
+			}
+		}
 		$document = detect_utf_encoding_and_remove($this->result["CONTENT"]);
 	}
 	elseif( $from == "local" )
