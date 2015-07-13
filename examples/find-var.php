@@ -9,13 +9,13 @@ require_once( "../OrgProfileDocument.php" );
 
 if( sizeof( $argv ) != 3 )
 {
-	print "find-dataset.php <homepage> <theme>\n";
-	print "   eg. find-dataset.php http://www.southampton.ac.uk/ equipment\n";
+	print "find-dataset.php <homepage> <term>\n";
+	print "   eg. find-dataset.php http://www.southampton.ac.uk/ http://purl.org/linkingyou/ research\n";
 	exit(1);
 }
 
 $homepage = $argv[1];
-$theme = $argv[2];
+$term = $argv[2];
 
 try {
 	$opd = OrgProfileDocument::discover( $homepage );
@@ -43,23 +43,6 @@ catch( Exception $e )
 }
 
 
-print "\n";
-print "OPD Loaded OK for $homepage\n\n";
-$datasets = $opd->datasets( "http://purl.org/openorg/theme/".$theme );
+print $opd->org->get($term)."\n";
 
-if( sizeof( $datasets ) == 0)
-{
-	print "No '$theme' datasets found.\n";
-	exit( 5 );
-}
-
-print $opd->org->label()." '".$theme."' Datasets:\n\n";
-foreach( $datasets as $dataset )
-{
-	print "URL: $dataset\n";
-	print "License: ".$dataset->get( "dcterms:license" )."\n";
-	print "Conforms to: ".$dataset->get( "dcterms:conformsTo" )."\n";
-	print "\n";
-}
-
-exit( 0 );
+exit;
