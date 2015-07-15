@@ -152,40 +152,41 @@ static function discover( $url )
 	}
 	$homepage = $bits[1]."/";
 	$result = OrgProfileDocument::get_url( $homepage );
-	
 	if( $result["HTTP_CODE"] == "200" )
 	{
-		# Ok. step 1, try .well-known/openorg
+		# Ok. step 1, look for a rel=openorg
 		$content = preg_replace( "/\n/", ' ', $result["CONTENT"] );
-		$links = array();
-		preg_replace( "/<link([^>]+)>/e", '$links []= "$1";', $content );
-		foreach( $links as $link )
+		global $opd_links;
+		$opd_links = array();
+		preg_replace_callback( "/<link([^>]+)>/", function($b){ global $opd_links;$opd_links []= $b[1]; }, $content );
+		foreach( $opd_links as $link )
 		{
 			$link = preg_replace( '/\\\\\'/', '"', $link );
-			$l = array();
-			preg_replace( "/([a-z]+)\s*=\s*(\"([^\"]+)\"|([^\s]+))/ei", '$l["$1"] = "$3$4"', $link );
-			if( @ $l["rel"] == "" ) { continue; }
+			global $opd_links_struct;
+			$opd_links_struct = array();
+			preg_replace_callback( "/([a-z]+)\s*=\s*(\"([^\"]+)\"|([^\s]+))/i", function($b) { global $opd_links_struct; $opd_links_struct[$b[1]] = @$b[3].@$b[4]; }, $link );
+			if( @ $opd_links_struct["rel"] == "" ) { continue; }
 
 			# use url_to_absolute if available otherwise busk it
-			if( @ $l["href"] )
+			if( @ $opd_links_struct["href"] )
 			{
 				if( function_exists( "url_to_absolute" ) )
 				{
 					# if the url to absolute library is available, obviously
 					# we'll use that.
-					$l["href"] = url_to_absolute( $homepage, $l["href"] );
+					$opd_links_struct["href"] = url_to_absolute( $homepage, $opd_links_struct["href"] );
 				}
 				else
 				{
 					# otherwise busk it, unless it starts with https? in which
 					# case no action is required.
-					if( ! preg_match( "/^https?:/", $l["href"] ) )
+					if( ! preg_match( "/^https?:/", $opd_links_struct["href"] ) )
 					{
-						$l["href"] = $homepage . preg_replace( "/^\//", "", $l["href"] );
+						$opd_links_struct["href"] = $homepage . preg_replace( "/^\//", "", $opd_links_struct["href"] );
 					}
 				}
 			}
-			$linkdata[$l["rel"]][]= $l;
+			$linkdata[$opd_links_struct["rel"]][]= $opd_links_struct;
 		}
 
 		if( @$linkdata["openorg"][0]["href"] )
